@@ -27,6 +27,14 @@
             background: #007bff;
             color: white;
         }
+        .delete-btn {
+            background-color: red;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
     </style>
 </head>
 <body>
@@ -40,22 +48,35 @@
 
     <script>
         async function loadGoogleSheet() {
-            const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTVhtsezsHkwS3pte41yM9MV8_gjWj7gGKhBCIDGgc59dwpI5DOasVYW-G5Z9qNlfjBV8lCSBRnzoW7/pub?gid=1236060155&single=true&output=csv"; // Replace with your Sheet's CSV link
+            const sheetURL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTVhtsezsHkwS3pte41yM9MV8_gjWj7gGKhBCIDGgc59dwpI5DOasVYW-G5Z9qNlfjBV8lCSBRnzoW7/pub?gid=1236060155&single=true&output=csv";
             const response = await fetch(sheetURL);
             const data = await response.text();
-            const rows = data.split("\n").map(row => row.split(","));
-            
+
+            // Fix potential issues by trimming spaces and handling commas properly
+            const rows = data.split("\n").map(row => row.trim()).filter(row => row.length > 0).map(row => row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/));
+
             const tableHead = document.getElementById("tableHead");
             const tableBody = document.getElementById("tableBody");
 
-            // Create table headers
-            tableHead.innerHTML = rows[0].map(header => `<th>${header}</th>`).join("");
+            // Create table headers + extra "Action" column
+            tableHead.innerHTML = rows[0].map(header => `<th>${header}</th>`).join("") + "<th>Action</th>";
 
-            // Populate table rows
-            rows.slice(1).forEach(row => {
-                const rowHTML = row.map(cell => `<td>${cell}</td>`).join("");
-                tableBody.innerHTML += `<tr>${rowHTML}</tr>`;
+            // Populate table rows with delete button
+            rows.slice(1).forEach((row, index) => {
+                if (row.length > 1) { // Ignore empty rows
+                    const rowHTML = row.map(cell => `<td>${cell.replace(/"/g, "")}</td>`).join(""); // Remove unwanted quotes
+                    const rowId = `row-${index}`;
+                    const rowElement = document.createElement("tr");
+                    rowElement.id = rowId;
+                    rowElement.innerHTML = rowHTML + `<td><button class="delete-btn" onclick="deleteRow('${rowId}')">Delete</button></td>`;
+                    tableBody.appendChild(rowElement);
+                }
             });
+        }
+
+        function deleteRow(rowId) {
+            const row = document.getElementById(rowId);
+            if (row) row.remove();
         }
 
         loadGoogleSheet();
